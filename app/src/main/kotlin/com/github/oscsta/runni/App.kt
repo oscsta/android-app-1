@@ -1,10 +1,13 @@
 package com.github.oscsta.runni
 
-class App {
-    val greeting: String
-        get() = "Hello World!"
-}
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.util.Log
 
-fun main() {
-    println(App().greeting)
+
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d("Test", "Test")
+    }
 }

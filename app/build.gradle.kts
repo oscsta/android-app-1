@@ -1,6 +1,8 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    // alias(libs.plugins.android.application)
+    id("com.android.application") version "8.11.0"
+    // alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.android") version "2.2.0"
 }
 
 android {
@@ -21,4 +23,5 @@ kotlin {
 
 dependencies {
     implementation(libs.guava)
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }
