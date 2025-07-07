@@ -1,8 +1,8 @@
 plugins {
-    // alias(libs.plugins.android.application)
-    id("com.android.application") version "8.11.0"
-    // alias(libs.plugins.kotlin.android)
-    id("org.jetbrains.kotlin.android") version "2.2.0"
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    // id("com.android.application") version "8.11.0"
+    // id("org.jetbrains.kotlin.android") version "2.2.0"
 }
 
 android {
@@ -18,10 +18,26 @@ android {
 }
 
 kotlin {
-    jvmToolchain(24)
+    jvmToolchain(21)
+    sourceSets {
+        main {
+            kotlin.srcDirs("src/main/kotlin")
+            resources.srcDirs("src/main/resources")
+        }
+        test {
+            kotlin.srcDirs("src/test/kotlin")
+            resources.srcDirs("src/test/resources")
+        }
+    }
 }
 
 dependencies {
     implementation(libs.guava)
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation(libs.appcompat)
+
+    testImplementation(kotlin("test"))
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
