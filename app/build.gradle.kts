@@ -32,7 +32,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.guava)
+    // implementation(libs.guava)
     implementation(libs.appcompat)
 
     testImplementation(kotlin("test"))
