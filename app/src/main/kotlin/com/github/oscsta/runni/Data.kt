@@ -1,19 +1,26 @@
 package com.github.oscsta.runni
 
+import android.content.Context
+
+import kotlin.concurrent.Volatile
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
-
-import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Entity(tableName = "run_instances")
+import kotlinx.coroutines.flow.Flow
+
+
+
+@Entity(tableName = "run_table")
 data class RunItem(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
@@ -22,18 +29,18 @@ data class RunItem(
 @Dao
 interface RunItemDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(item: Item)
+    suspend fun insert(item: RunItem)
 
     @Update
-    suspend fun update(item: Item)
+    suspend fun update(item: RunItem)
 
     @Delete
-    suspend fun delete(item: Item)
+    suspend fun delete(item: RunItem)
 
-    @Query("SELECT * from items WHERE id = :id")
+    @Query("SELECT * from run_table WHERE id = :id")
     fun getItem(id: Int): Flow<RunItem>
 
-    @Query("SELECT * from items ORDER BY name ASC")
+    @Query("SELECT * from run_table ORDER BY id ASC")
     fun getAllItems(): Flow<List<RunItem>>
 }
 

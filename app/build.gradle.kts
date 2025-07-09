@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     // id("com.android.application") version "8.11.0"
     // id("org.jetbrains.kotlin.android") version "2.2.0"
+
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -19,21 +21,15 @@ android {
 
 kotlin {
     jvmToolchain(21)
-    sourceSets {
-        main {
-            kotlin.srcDirs("src/main/kotlin")
-            resources.srcDirs("src/main/resources")
-        }
-        test {
-            kotlin.srcDirs("src/test/kotlin")
-            resources.srcDirs("src/test/resources")
-        }
-    }
 }
 
 dependencies {
-    // implementation(libs.guava)
     implementation(libs.appcompat)
+
+    // Room DB
+    implementation("androidx.room:room-runtime:2.7.2")
+    ksp("androidx.room:room-compiler:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
 
     testImplementation(kotlin("test"))
 }
