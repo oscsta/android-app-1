@@ -1,13 +1,15 @@
 package com.github.oscsta.runni
 
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import android.os.Bundle
 import android.util.Log
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("Test", "Test")
+        setContent {
+            
+        }
     }
 }
