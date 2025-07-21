@@ -33,3 +33,6 @@ build
 
 # Include gradle wrapper
 !gradle/wrapper/gradle-wrapper.jar
+
+.fleet/
+.vs/
