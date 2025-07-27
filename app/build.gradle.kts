@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // id("com.android.application") version "8.11.0"
-    // id("org.jetbrains.kotlin.android") version "2.2.0"
 
     id("com.google.devtools.ksp")
 }
@@ -25,11 +23,19 @@ kotlin {
 
 dependencies {
     implementation(libs.appcompat)
+    implementation(libs.activity.ktx)
+    implementation(libs.lifecycle.service)
 
     // Room DB
-    implementation("androidx.room:room-runtime:2.7.2")
-    ksp("androidx.room:room-compiler:2.7.2")
-    implementation("androidx.room:room-ktx:2.7.2")
+    ksp(libs.room.compiler)
+    implementation(libs.room.ktx)
+    implementation(libs.room.runtime)
+
+    // Location
+    implementation(libs.play.services.location)
+
+//    implementation("androidx.fragment:fragment-ktx:1.8.8")
+//    implementation("androidx.fragment:fragment-compose:1.8.8")
 
     testImplementation(kotlin("test"))
 }

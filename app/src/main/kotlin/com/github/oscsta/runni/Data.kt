@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.Flow
 
 
 // In this case an "activity" is an activity of running/jogging/walking
-@Entity(tableName = "runs")
+@Entity(tableName = "run_table")
 data class TrackedActivity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
