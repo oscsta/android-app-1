@@ -22,9 +22,14 @@ kotlin {
 }
 
 dependencies {
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+
     implementation(libs.appcompat)
     implementation(libs.activity.ktx)
+    implementation(libs.activity.compose)
     implementation(libs.lifecycle.service)
+    implementation(libs.material3.android)
 
     // Room DB
     ksp(libs.room.compiler)
@@ -37,6 +42,7 @@ dependencies {
 //    implementation("androidx.fragment:fragment-ktx:1.8.8")
 //    implementation("androidx.fragment:fragment-compose:1.8.8")
 
+    androidTestImplementation(composeBom)
     testImplementation(kotlin("test"))
 }
 
