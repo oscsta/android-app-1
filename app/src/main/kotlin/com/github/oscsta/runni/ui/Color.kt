@@ -1,4 +1,4 @@
-package com.example.compose
+package com.github.oscsta.runni.ui
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF2E628C)

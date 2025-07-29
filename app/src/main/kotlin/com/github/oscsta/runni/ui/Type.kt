@@ -1,4 +1,4 @@
-package com.example.ui.theme
+package com.github.oscsta.runni.ui
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

@@ -1,4 +1,4 @@
-package com.example.compose
+package com.github.oscsta.runni.ui
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
