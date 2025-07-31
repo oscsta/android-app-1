@@ -1,13 +1,14 @@
 package com.github.oscsta.runni
 
 import android.Manifest
-import android.app.Service
-import android.content.Context
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.location.Location
+import android.content.pm.ServiceInfo
 import android.os.IBinder
-import androidx.core.content.ContextCompat
+import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.*
@@ -17,9 +18,17 @@ import kotlinx.coroutines.launch
 
 class RunniLocationService : LifecycleService() {
     private val TAG = javaClass.simpleName
+    private val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
+    private val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
+    private val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME = "Foreground service notification"
     private val fusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(this)
     }
+    private val db by lazy {
+        TrackedActivityDatabase.getDatabase(applicationContext)
+    }
+    private var activeActivityRowId: Int? = null
+    private lateinit var currentlyRunningNotification: Notification
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
@@ -28,38 +37,77 @@ class RunniLocationService : LifecycleService() {
         return null
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
-        buildLocationCallback()
+    private fun setupNotificationPrerequisites() {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID,
+            CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply { description = "Show notification while your exact location is actively being tracked" }
+        notificationManager.createNotificationChannel(channel)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+    private fun buildLocationRequest(intervalMillis: Long = 10000) {
+        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis).build()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val finePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-        assert(finePermission == PackageManager.PERMISSION_GRANTED)
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, Dispatchers.IO.asExecutor(), locationCallback)
-        return super.onStartCommand(intent, flags, startId)
+    private fun buildCurrentlyRunningNotification() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        currentlyRunningNotification =
+            Notification.Builder(this, CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("Test Title")
+                .setContentText("Test Content")
+                .setContentIntent(pendingIntent)
+                .build()
     }
 
     private fun buildLocationCallback() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
-                locationResult.lastLocation?.let {
-                    location: Location -> lifecycleScope.launch {
-                        print(location)
+                locationResult.lastLocation?.let { location ->
+                    lifecycleScope.launch {
+                        val locationEntity =
+                            LocationEntity.fromGooglePlayServiceLocation(location, activeActivityRowId!!)
+                        val locationDao = db.locationEntityDao()
+                        locationDao.insert(locationEntity)
                     }
                 }
             }
         }
     }
-}
 
-fun checkLocationPermissions() {
-    val builder = LocationSettingsRequest.Builder().addLocationRequest()
+    override fun onCreate() {
+        super.onCreate()
+        buildLocationRequest()
+        buildLocationCallback()
+        setupNotificationPrerequisites()
+        buildCurrentlyRunningNotification()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+//        val finePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+//        assert(finePermission == PackageManager.PERMISSION_GRANTED)
+        ServiceCompat.startForeground(
+            this,
+            CURRENTLY_TRACKING_NOTIFICATION_ID,
+            currentlyRunningNotification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        )
+
+        fusedLocationProviderClient.requestLocationUpdates(
+            locationRequest,
+            Dispatchers.IO.asExecutor(),
+            locationCallback
+        )
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+    }
 }
