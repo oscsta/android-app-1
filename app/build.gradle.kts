@@ -8,11 +8,11 @@ plugins {
 
 android {
     namespace = "com.github.oscsta.runni"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.github.oscsta.runni"
         minSdk = 31
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }
