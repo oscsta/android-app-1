@@ -1,9 +1,11 @@
 package com.github.oscsta.runni
 
 import android.content.Intent
-import androidx.activity.ComponentActivity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
@@ -14,7 +16,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AppTheme {
-                
             }
         }
     }
@@ -28,7 +29,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 @Preview(showSystemUi = true)
 fun MainTest() {
-    AppTheme() {
-        Text("Hi")
+    AppTheme {
+        Row {
+            Card { Text("Hello There") }
+        }
     }
 }
