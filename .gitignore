@@ -35,5 +35,6 @@ build
 !gradle/wrapper/gradle-wrapper.jar
 
 .fleet/
+.idea/
 .vs/
 local.properties
