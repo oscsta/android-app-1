@@ -4,10 +4,8 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import com.github.oscsta.runni.ui.AppTheme
 
@@ -28,11 +26,9 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-@Preview(device = Devices.PIXEL_7)
+@Preview(showSystemUi = true)
 fun MainTest() {
-    AppTheme(false, false) {
-        Surface {
-            Text("Hi")
-        }
+    AppTheme() {
+        Text("Hi")
     }
 }

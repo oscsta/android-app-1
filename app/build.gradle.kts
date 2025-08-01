@@ -19,10 +19,11 @@ android {
     buildFeatures {
         compose = true
     }
+    buildToolsVersion = "36.0.0"
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 dependencies {

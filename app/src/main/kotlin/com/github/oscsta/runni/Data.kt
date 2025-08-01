@@ -73,11 +73,9 @@ interface TrackedActivityDao {
     @Query("SELECT * from activities ORDER BY id ASC")
     fun getAllItems(): Flow<List<TrackedActivityEntity>>
 
-    @Query("")
-    fun getActivityWithLocation(id: Long)
-
-    @Query("")
-    fun getAllActivitiesWithLocation()
+//    fun getActivityWithLocation(id: Long)
+//
+//    fun getAllActivitiesWithLocation()
 }
 
 @Dao
