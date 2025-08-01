@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 
     id("com.google.devtools.ksp")
 }
@@ -14,6 +15,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+    }
+    buildFeatures {
+        compose = true
     }
 }
 
@@ -30,6 +34,8 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.service)
     implementation(libs.material3.android)
+    implementation(libs.ui.tooling)
+    implementation(libs.ui.tooling.preview)
 
     // Room DB
     ksp(libs.room.compiler)
@@ -38,6 +44,8 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
+
+
 
 //    implementation("androidx.fragment:fragment-ktx:1.8.8")
 //    implementation("androidx.fragment:fragment-compose:1.8.8")

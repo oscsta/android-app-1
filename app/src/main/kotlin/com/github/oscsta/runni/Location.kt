@@ -27,7 +27,7 @@ class RunniLocationService : LifecycleService() {
     private val db by lazy {
         TrackedActivityDatabase.getDatabase(applicationContext)
     }
-    private var activeActivityRowId: Int? = null
+    private var activeRowId: Int? = null
     private lateinit var currentlyRunningNotification: Notification
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
@@ -71,7 +71,7 @@ class RunniLocationService : LifecycleService() {
                 locationResult.lastLocation?.let { location ->
                     lifecycleScope.launch {
                         val locationEntity =
-                            LocationEntity.fromGooglePlayServiceLocation(location, activeActivityRowId!!)
+                            LocationEntity.fromGooglePlayServiceLocation(location, activeRowId!!)
                         val locationDao = db.locationEntityDao()
                         locationDao.insert(locationEntity)
                     }
