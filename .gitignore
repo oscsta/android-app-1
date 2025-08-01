@@ -36,3 +36,4 @@ build
 
 .fleet/
 .vs/
+local.properties
