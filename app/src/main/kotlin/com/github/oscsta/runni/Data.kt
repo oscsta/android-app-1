@@ -110,12 +110,3 @@ abstract class TrackedActivityDatabase : RoomDatabase() {
         }
     }
 }
-
-//class TrackedActivityRepository(
-//    private val dao: TrackedActivityDao
-//) {
-//    suspend fun insertActivity(activity: TrackedActivityEntity) = dao.insert(activity)
-//    suspend fun updateActivity(activity: TrackedActivityEntity) = dao.update(activity)
-//    suspend fun deleteActivity(activity: TrackedActivityEntity) = dao.delete(activity)
-//    fun getAllActivitiesAsFlow(): Flow<List<TrackedActivityEntity>> = dao.getAllItems()
-//}
