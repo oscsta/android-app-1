@@ -14,7 +14,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".RunniLocationService"
+            android:name=".PeriodicLocationService"
             android:exported="false"
             android:foregroundServiceType="location">
         </service>

@@ -15,7 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
 
-class RunniLocationService : LifecycleService() {
+class PeriodicLocationService : LifecycleService() {
     private val TAG = javaClass.simpleName
     private val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
     private val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
