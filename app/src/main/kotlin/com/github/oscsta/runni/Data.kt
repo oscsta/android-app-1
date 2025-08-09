@@ -10,11 +10,12 @@ import kotlinx.coroutines.flow.Flow
 
 
 // In this case an "activity" is an activity of running/jogging/walking
-@Entity(tableName = "activities", indices = [Index(value = ["timestamp"])])
+@Entity(tableName = "activities", indices = [Index(value = ["start_timestamp"])])
 data class TrackedActivityEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val timestamp: Long,
+    @ColumnInfo(name = "start_timestamp")
+    val startTimestamp: Long,
 )
 
 @Entity(
@@ -31,7 +32,7 @@ data class LocationEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     @ColumnInfo(name = "parent_id", index = true)
-    val parentId: Int,
+    val parentId: Long,
     val timestamp: Long,
     val latitude: Double,
     val longitude: Double,
@@ -40,7 +41,7 @@ data class LocationEntity(
     val speed: Float,
 ) {
     companion object {
-        fun fromGooglePlayServiceLocation(location: Location, parentId: Int): LocationEntity =
+        fun fromGooglePlayServiceLocation(location: Location, parentId: Long): LocationEntity =
             with(location) {
                 LocationEntity(
                     parentId = parentId,
@@ -67,11 +68,14 @@ interface TrackedActivityDao {
     @Delete
     suspend fun delete(item: TrackedActivityEntity)
 
-    @Query("SELECT * from activities WHERE id = :id")
+    @Query("SELECT * FROM activities WHERE id = :id")
     fun getItem(id: Long): Flow<TrackedActivityEntity>
 
-    @Query("SELECT * from activities ORDER BY id ASC")
+    @Query("SELECT * FROM activities ORDER BY id ASC")
     fun getAllItems(): Flow<List<TrackedActivityEntity>>
+
+    @Query("SELECT start_timestamp FROM activities ORDER BY id DESC LIMIT 1")
+    fun getMostRecentStartTime(): Flow<Long>
 
 //    fun getActivityWithLocation(id: Long)
 //

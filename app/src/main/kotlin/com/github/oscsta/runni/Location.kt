@@ -1,5 +1,6 @@
 package com.github.oscsta.runni
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -16,17 +18,13 @@ import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
 
 class PeriodicLocationService : LifecycleService() {
-    private val TAG = javaClass.simpleName
-    private val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
-    private val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
-    private val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME = "Foreground service notification"
     private val fusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(this)
     }
     private val db by lazy {
         TrackedActivityDatabase.getDatabase(applicationContext)
     }
-    private var activeRowId: Int? = null
+    private var activeRowId: Long? = null
     private lateinit var currentlyRunningNotification: Notification
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
@@ -60,6 +58,7 @@ class PeriodicLocationService : LifecycleService() {
                 .setContentTitle("Test Title")
                 .setContentText("Test Content")
                 .setContentIntent(pendingIntent)
+                .setSmallIcon(android.R.drawable.ic_media_play)
                 .build()
     }
 
@@ -87,9 +86,9 @@ class PeriodicLocationService : LifecycleService() {
         buildCurrentlyRunningNotification()
     }
 
+    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-//        val finePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-//        assert(finePermission == PackageManager.PERMISSION_GRANTED)
+        activeRowId = intent!!.getLongExtra("ACTIVE_ID", 0L)
         ServiceCompat.startForeground(
             this,
             CURRENTLY_TRACKING_NOTIFICATION_ID,
@@ -109,4 +108,13 @@ class PeriodicLocationService : LifecycleService() {
         super.onDestroy()
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
     }
+
+    companion object {
+        @Suppress("unused")
+        private val TAG = PeriodicLocationService::class.java.simpleName
+    }
 }
+
+private const val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
+private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
+private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME = "Foreground service notification"

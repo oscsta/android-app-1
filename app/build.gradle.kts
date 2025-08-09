@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.material3.android)
     implementation(libs.ui.tooling)
     implementation(libs.ui.tooling.preview)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.foundation)
 
     // Room DB
     ksp(libs.room.compiler)
