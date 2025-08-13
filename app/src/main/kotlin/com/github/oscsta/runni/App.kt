@@ -4,20 +4,21 @@ import android.Manifest
 import android.app.Application
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -30,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -43,15 +43,26 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import java.util.Locale
+import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import android.content.pm.PackageManager as PM
 
 
@@ -112,8 +123,8 @@ class MainActivity : ComponentActivity() {
                 Scaffold { scaffoldPadding ->
                     Box(modifier = Modifier.padding(scaffoldPadding)) {
                         when (vm.status) {
-                            TrackingState.INACTIVE -> DefaultView(::onStartButtonClick)
-                            TrackingState.ACTIVE -> ActiveView(::onStopButtonClick)
+                            TrackingState.INACTIVE -> DefaultView(onStart = ::onStartButtonClick)
+                            TrackingState.ACTIVE -> ActiveView(onStop = ::onStopButtonClick)
                             TrackingState.DETAILED_ITEM_VIEW -> DetailedItemView()
                         }
                     }
@@ -133,14 +144,15 @@ class MainActivity : ComponentActivity() {
                 if (shouldShowFineLocationRationale) {
                     AlertDialog(
                         onDismissRequest = {
-                            shouldShowFineLocationRationale = false; launchFinePermissionLauncher()
+                            shouldShowFineLocationRationale =
+                                false; launchFineLocationPermissionLauncher()
                         },
                         title = { Text("Precise location is required") },
                         text = { Text("Accurate tracking is not possible without precise location permissions. Allow access to precise location in order to start tracking.") },
                         confirmButton = {
                             Button(onClick = {
                                 shouldShowFineLocationRationale = false
-                                launchFinePermissionLauncher()
+                                launchFineLocationPermissionLauncher()
                             }) { Text("OK") }
                         }
                     )
@@ -177,7 +189,7 @@ class MainActivity : ComponentActivity() {
         vm.status = TrackingState.INACTIVE
     }
 
-    private fun launchFinePermissionLauncher() {
+    private fun launchFineLocationPermissionLauncher() {
         requestFineLocationPermissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -200,7 +212,7 @@ class MainActivity : ComponentActivity() {
         }
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
             TODO()
-        } else launchFinePermissionLauncher()
+        } else launchFineLocationPermissionLauncher()
     }
 
     private fun onStopButtonClick() {
@@ -210,7 +222,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun DefaultView(onStart: () -> Unit, vm: MonoViewModel = viewModel()) {
+fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -219,13 +231,13 @@ fun DefaultView(onStart: () -> Unit, vm: MonoViewModel = viewModel()) {
     ) {
         Card(
             modifier = Modifier
-                .weight(3f)
+                .weight(4f)
                 .fillMaxSize()
         ) {
             val allTrackedActivities by vm.allTrackedActivities.collectAsState()
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(allTrackedActivities) { item ->
-                    Card() { Text(item.id.toString()) }
+                    TrackedActivityListItem(item)
                 }
             }
         }
@@ -236,23 +248,50 @@ fun DefaultView(onStart: () -> Unit, vm: MonoViewModel = viewModel()) {
                 .weight(1f)
                 .fillMaxSize(),
             shape = RoundedCornerShape(8.dp)
-        ) { }
+        ) {
+            Text(text = "Start")
+        }
     }
 }
-@Preview
+
 @Composable
-fun ActiveView(onStop: () -> Unit = {}) {
+fun ActiveView(vm: MonoViewModel = viewModel(), onStop: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Card(modifier = Modifier.weight(3f).fillMaxWidth()) {
-            ElapsedTimeText()
+        Card(modifier = Modifier
+            .weight(4f)
+            .fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val startTime by vm.startTime.collectAsState(0)
+                Box(Modifier
+                    .weight(1f)
+                    .fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ElapsedTimeText(startTime)
+                }
+                Box(Modifier
+                    .weight(2f)
+                    .fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "Hi!")
+                }
+            }
         }
         Spacer(Modifier.height(16.dp))
-        Button(onStop, modifier = Modifier.weight(1f).fillMaxSize(), shape = RoundedCornerShape(8.dp)) { }
+        Button(
+            onStop,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(text = "Stop")
+        }
     }
 }
 
@@ -260,27 +299,83 @@ fun ActiveView(onStop: () -> Unit = {}) {
 fun DetailedItemView(): Unit = TODO()
 
 @Composable
-fun ElapsedTimeText(vm: MonoViewModel = viewModel()) {
-    val startTime by vm.startTime.collectAsState(0)
+fun ElapsedTimeText(startTime: Long, modifier: Modifier = Modifier) {
     if (startTime == 0L) return
-
     var elapsedTimeMillis by remember { mutableLongStateOf(0) }
-    var elapsedTimeFormattedString by remember { mutableStateOf("00:00:00") }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(startTime) {
         while (isActive) {
             val currentTime = System.currentTimeMillis()
             elapsedTimeMillis = currentTime - startTime
-            val duration = elapsedTimeMillis.milliseconds
-            val hh = duration.inWholeHours
-            val mm = duration.inWholeMinutes % 60
-            val ss = duration.inWholeSeconds % 60
-            elapsedTimeFormattedString = String.format(Locale.ROOT, "%02d:%02d:%02d", hh, mm, ss)
-            Log.d("TAQGTAG", startTime.toString())
-            Log.d("TAQGTAG", currentTime.toString())
-            Log.d("TAQGTAG", elapsedTimeMillis.toString())
-            Log.d("TAQGTAG", elapsedTimeFormattedString)
             delay(1000)
         }
     }
-    Text(text = elapsedTimeFormattedString)
+    val duration = elapsedTimeMillis.milliseconds
+    Text(
+        text = duration.toHourMinuteSecondColonDelimited(),
+        fontSize = 48.sp,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Modifier) {
+    val totalDuration = ((item.endTimestamp ?: item.startTimestamp) - item.startTimestamp).milliseconds
+    val startDateTimeInSysTz = Instant.fromEpochMilliseconds(item.startTimestamp).toLocalDateTime(TimeZone.currentSystemDefault())
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = startDateTimeInSysTz.toString(),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = totalDuration.toHourMinuteSecondColonDelimited(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Duration", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "hh:mm:ss", style = MaterialTheme.typography.bodySmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.tertiary)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "%.2f".format(item.averageSpeedInMetersPerSecond), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Speed (avg)", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "m/s", style = MaterialTheme.typography.bodySmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.tertiary)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = item.totalDistanceInMeters.toString(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Total distance", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "m.", style = MaterialTheme.typography.bodySmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.tertiary)
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ListItemPreview() {
+    val item = TrackedActivityEntity(
+        id = 0,
+        startTimestamp = 1,
+    )
+    TrackedActivityListItem(item)
+}
+
+fun Duration.toHourMinuteSecondColonDelimited(): String {
+    return this.toComponents { hh, mm, ss, _ ->
+        String.format(
+            Locale.ROOT,
+            "%02d:%02d:%02d",
+            hh,
+            mm,
+            ss
+        )
+    }
+
 }

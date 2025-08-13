@@ -16,6 +16,12 @@ data class TrackedActivityEntity(
     val id: Long = 0,
     @ColumnInfo(name = "start_timestamp")
     val startTimestamp: Long,
+    @ColumnInfo(name = "end_timestamp")
+    val endTimestamp: Long? = null,
+    @ColumnInfo(name = "total_distance")
+    val totalDistanceInMeters: Int = 0,
+    @ColumnInfo(name = "average_speed")
+    val averageSpeedInMetersPerSecond: Float = 0f
 )
 
 @Entity(
@@ -71,7 +77,7 @@ interface TrackedActivityDao {
     @Query("SELECT * FROM activities WHERE id = :id")
     fun getItem(id: Long): Flow<TrackedActivityEntity>
 
-    @Query("SELECT * FROM activities ORDER BY id ASC")
+    @Query("SELECT * FROM activities ORDER BY id DESC")
     fun getAllItems(): Flow<List<TrackedActivityEntity>>
 
     @Query("SELECT start_timestamp FROM activities ORDER BY id DESC LIMIT 1")

@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.ui.tooling.preview)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.foundation)
+    implementation(libs.kotlinx.datetime)
 
     // Room DB
     ksp(libs.room.compiler)
@@ -49,9 +50,6 @@ dependencies {
     implementation(libs.play.services.location)
 
 
-
-//    implementation("androidx.fragment:fragment-ktx:1.8.8")
-//    implementation("androidx.fragment:fragment-compose:1.8.8")
 
     androidTestImplementation(composeBom)
     testImplementation(kotlin("test"))
