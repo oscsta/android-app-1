@@ -8,7 +8,6 @@ import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Entity
 import androidx.room.ForeignKey
-import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
@@ -21,11 +20,11 @@ import kotlin.concurrent.Volatile
 
 
 // In this case an "activity" is an activity of running/jogging/walking
-@Entity(tableName = "activities", indices = [Index(value = ["start_timestamp"])])
+@Entity(tableName = "activities")
 data class TrackedActivityEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    @ColumnInfo(name = "start_timestamp")
+    @ColumnInfo(name = "start_timestamp", index = true)
     val startTimestamp: Long,
     @ColumnInfo(name = "end_timestamp")
     val endTimestamp: Long? = null,

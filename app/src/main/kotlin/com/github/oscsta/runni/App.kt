@@ -160,7 +160,7 @@ class MainActivity : ComponentActivity() {
         vm.activeId = activeId
         val serviceIntent = Intent(this, PeriodicLocationService::class.java).apply {
             putExtra(
-                "ACTIVE_ID", activeId
+                "ACTIVE_ID", vm.activeId
             )
         }
         startForegroundService(serviceIntent)
