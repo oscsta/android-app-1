@@ -77,8 +77,8 @@ class MonoViewModel(application: Application) : AndroidViewModel(application) {
         TrackedActivityDatabase.getDatabase(application)
     }
     val allTrackedActivities = db.trackedActivityDao().getAllItemsByMostRecent().stateIn(
-            viewModelScope, SharingStarted.WhileSubscribed(), emptyList()
-        )
+        viewModelScope, SharingStarted.WhileSubscribed(), emptyList()
+    )
     val startTime by lazy {
         db.trackedActivityDao().getMostRecentStartTime()
     }
@@ -150,7 +150,8 @@ class MainActivity : ComponentActivity() {
                                 shouldShowFineLocationRationale = false
                                 launchFineLocationPermissionLauncher()
                             }) { Text("OK") }
-                        })
+                        }
+                    )
                 }
             }
         }
@@ -314,8 +315,8 @@ fun ElapsedTimeText(startTime: Long, modifier: Modifier = Modifier) {
 @OptIn(ExperimentalTime::class)
 @Composable
 fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Modifier) {
-    val totalDuration =
-        ((item.endTimestamp ?: item.startTimestamp) - item.startTimestamp).milliseconds // For now just show 0 if there was no end timestamp
+    val totalDuration = ((item.endTimestamp
+        ?: item.startTimestamp) - item.startTimestamp).milliseconds // For now just show 0 if there was no end timestamp
     val startDateTimeInSysTz = Instant.fromEpochMilliseconds(item.startTimestamp)
         .toLocalDateTime(TimeZone.currentSystemDefault())
     val formatter =
@@ -341,7 +342,10 @@ fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Mo
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Spacer(modifier = modifier.weight(1f)) // Make the columns right-aligned while still being able to use spacedBy as the arrangement
-                Column(modifier = modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         text = totalDuration.toHourMinuteSecondColonDelimited(),
                         fontWeight = FontWeight.Bold,
@@ -356,13 +360,18 @@ fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Mo
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-                Column(modifier = modifier.weight(1f),horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = item.averageSpeedInMetersPerSecond?.let { averageSpeed -> "%.2f".format(averageSpeed) } ?: "N/A", // For now just inform of missing value in UI
+                Column(
+                    modifier = modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = item.averageSpeedInMetersPerSecond?.let { averageSpeed ->
+                        "%.2f".format(
+                            averageSpeed
+                        )
+                    } ?: "N/A", // For now just inform of missing value in UI
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                        style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Speed", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         text = "m/s (avg.)",
@@ -371,13 +380,18 @@ fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Mo
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-                Column(modifier = modifier.weight(1f),horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = item.totalDistanceInMeters?.let { totalDistance -> "%.2f".format(totalDistance / 1000f) } ?: "N/A", // For now just inform of missing value in UI
+                Column(
+                    modifier = modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = item.totalDistanceInMeters?.let { totalDistance ->
+                        "%.2f".format(
+                            totalDistance / 1000f
+                        )
+                    } ?: "N/A", // For now just inform of missing value in UI
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                        style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Distance", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         text = "km. (total)",
