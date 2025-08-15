@@ -5,17 +5,33 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.location.Location
 import android.os.IBinder
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.location.*
+import androidx.work.CoroutineWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
+
+private const val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
+private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
+private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME = "Active location tracking" // Human readable name
 
 class PeriodicLocationService : LifecycleService() {
     private val fusedLocationProviderClient by lazy {
@@ -29,6 +45,11 @@ class PeriodicLocationService : LifecycleService() {
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
+    companion object {
+        @Suppress("unused")
+        private val TAG = PeriodicLocationService::class.java.simpleName
+    }
+
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
         return null
@@ -40,12 +61,10 @@ class PeriodicLocationService : LifecycleService() {
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID,
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = "Show notification while your exact location is actively being tracked" }
+        ).apply {
+            description = "Show notification while your exact location is actively being tracked"
+        }
         notificationManager.createNotificationChannel(channel)
-    }
-
-    private fun buildLocationRequest(intervalMillis: Long = 10000) {
-        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis).build()
     }
 
     private fun buildCurrentlyRunningNotification() {
@@ -60,6 +79,11 @@ class PeriodicLocationService : LifecycleService() {
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .build()
+    }
+
+    private fun buildLocationRequest(intervalMillis: Long = 10000) {
+        locationRequest =
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis).build()
     }
 
     private fun buildLocationCallback() {
@@ -97,9 +121,7 @@ class PeriodicLocationService : LifecycleService() {
         )
 
         fusedLocationProviderClient.requestLocationUpdates(
-            locationRequest,
-            Dispatchers.IO.asExecutor(),
-            locationCallback
+            locationRequest, Dispatchers.IO.asExecutor(), locationCallback
         )
         return super.onStartCommand(intent, flags, startId)
     }
@@ -107,14 +129,43 @@ class PeriodicLocationService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
-    }
 
-    companion object {
-        @Suppress("unused")
-        private val TAG = PeriodicLocationService::class.java.simpleName
+        val statsWorkRequest =
+            OneTimeWorkRequestBuilder<TrackedActivityStatsWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .setInputData(workDataOf("ID" to activeRowId))
+                .build()
+        WorkManager.getInstance(this).enqueue(statsWorkRequest)
     }
 }
 
-private const val CURRENTLY_TRACKING_NOTIFICATION_ID: Int = 1
-private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID = "LOCATION_TRACKING_CURRENTLY_RUNNING"
-private const val CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME = "Foreground service notification"
+class TrackedActivityStatsWorker(context: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(
+        context, workerParams
+    ) {
+    private val db = TrackedActivityDatabase.getDatabase(context)
+    private val activityDao = db.trackedActivityDao()
+    private val locationDao = db.locationEntityDao()
+
+    override suspend fun doWork(): Result {
+        val activityId = inputData.getLong("ID", -1L)
+        if (activityId == -1L) return Result.failure()
+
+        val locations = locationDao.getAllWithParentId(activityId)
+        val endTimestamp = System.currentTimeMillis()
+        activityDao.updateEndTimestampById(activityId, endTimestamp)
+
+        val out = FloatArray(1)
+        val summedDistance = locations.windowed(2, 1).sumOf { (first, second) ->
+                Location.distanceBetween(
+                    first.latitude, first.longitude, second.latitude, second.longitude, out
+                )
+                out[0].toDouble() // There is no sumOf overload that returns Floats, only Doubles. Wtf? Precision reasons?
+            }.toFloat()
+        val avgSpeed = locations.map { it.speed }
+            .average()
+            .toFloat() // .average() returns Double cause precision reasons
+        activityDao.updateStatsById(activityId, summedDistance, avgSpeed)
+
+        return Result.success()
+    }
+}

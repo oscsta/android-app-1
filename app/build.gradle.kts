@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.foundation)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.work.runtime.ktx)
 
     // Room DB
     ksp(libs.room.compiler)

@@ -2,11 +2,22 @@ package com.github.oscsta.runni
 
 import android.content.Context
 import android.location.Location
-import androidx.room.*
-
-import kotlin.concurrent.Volatile
-
+import androidx.room.ColumnInfo
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Delete
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import kotlin.concurrent.Volatile
 
 
 // In this case an "activity" is an activity of running/jogging/walking
@@ -19,14 +30,13 @@ data class TrackedActivityEntity(
     @ColumnInfo(name = "end_timestamp")
     val endTimestamp: Long? = null,
     @ColumnInfo(name = "total_distance")
-    val totalDistanceInMeters: Int = 0,
+    val totalDistanceInMeters: Float? = null,
     @ColumnInfo(name = "average_speed")
-    val averageSpeedInMetersPerSecond: Float = 0f
+    val averageSpeedInMetersPerSecond: Float? = null
 )
 
 @Entity(
     tableName = "locations",
-    indices = [Index(value = ["timestamp"])],
     foreignKeys = [ForeignKey(
         entity = TrackedActivityEntity::class,
         parentColumns = ["id"],
@@ -39,6 +49,7 @@ data class LocationEntity(
     val id: Long = 0,
     @ColumnInfo(name = "parent_id", index = true)
     val parentId: Long,
+    @ColumnInfo(index = true)
     val timestamp: Long,
     val latitude: Double,
     val longitude: Double,
@@ -74,11 +85,17 @@ interface TrackedActivityDao {
     @Delete
     suspend fun delete(item: TrackedActivityEntity)
 
+    @Query("UPDATE activities SET end_timestamp = :end WHERE id = :id")
+    suspend fun updateEndTimestampById(id: Long, end: Long)
+
+    @Query("UPDATE activities SET total_distance = :totalDistance, average_speed = :avgSpeed WHERE id = :id")
+    suspend fun updateStatsById(id: Long, totalDistance: Float, avgSpeed: Float)
+
     @Query("SELECT * FROM activities WHERE id = :id")
     fun getItem(id: Long): Flow<TrackedActivityEntity>
 
     @Query("SELECT * FROM activities ORDER BY id DESC")
-    fun getAllItems(): Flow<List<TrackedActivityEntity>>
+    fun getAllItemsByMostRecent(): Flow<List<TrackedActivityEntity>>
 
     @Query("SELECT start_timestamp FROM activities ORDER BY id DESC LIMIT 1")
     fun getMostRecentStartTime(): Flow<Long>
@@ -98,6 +115,9 @@ interface LocationEntityDao {
 
     @Delete
     suspend fun delete(item: LocationEntity)
+
+    @Query("SELECT * from locations WHERE parent_id = :parentId ORDER BY id ASC")
+    suspend fun getAllWithParentId(parentId: Long): List<LocationEntity>
 }
 
 @Database(entities = [TrackedActivityEntity::class, LocationEntity::class], version = 1)
