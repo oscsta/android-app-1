@@ -116,8 +116,8 @@ class MonoViewModel(application: Application) : AndroidViewModel(application) {
 
 class MainActivity : ComponentActivity() {
     private val vm: MonoViewModel by viewModels()
-    private var shouldShowInsufficientPermissionsDialog by mutableStateOf(false)
-    private var shouldShowFineLocationRationale by mutableStateOf(false)
+    private var shouldShowInsufficientPermissionsDialog by mutableStateOf(false)    // These two dialogs and flags are painfully similar
+    private var shouldShowFineLocationRationale by mutableStateOf(false)            // These two dialogs and flags are painfully similar
     private val requestFineLocationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             when {
