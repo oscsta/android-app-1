@@ -4,11 +4,22 @@ import android.Manifest
 import android.app.Application
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,10 +36,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +52,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,17 +85,20 @@ import android.content.pm.PackageManager as PM
 
 
 enum class TrackingState {
-    ACTIVE, INACTIVE, DETAILED_ITEM_VIEW
+    ACTIVE, INACTIVE
 }
 
 class MonoViewModel(application: Application) : AndroidViewModel(application) {
-    var activeId by mutableLongStateOf(0)
-    var status by mutableStateOf(TrackingState.INACTIVE)
     private val db by lazy {
         TrackedActivityDatabase.getDatabase(application)
     }
+    var activeId by mutableLongStateOf(0)
+    var status by mutableStateOf(TrackingState.INACTIVE)
     val allTrackedActivities = db.trackedActivityDao().getAllItemsByMostRecent().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(), emptyList()
+    )
+    val mostRecentLocation = db.locationEntityDao().getMostRecentLocation().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(), null
     )
     val startTime by lazy {
         db.trackedActivityDao().getMostRecentStartTime()
@@ -119,10 +140,19 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 Scaffold { scaffoldPadding ->
                     Box(modifier = Modifier.padding(scaffoldPadding)) {
-                        when (vm.status) {
-                            TrackingState.INACTIVE -> DefaultView(onStart = ::onStartButtonClick)
-                            TrackingState.ACTIVE -> ActiveView(onStop = ::onStopButtonClick)
-                            TrackingState.DETAILED_ITEM_VIEW -> DetailedItemView()
+                        AnimatedVisibility(
+                            visible = vm.status == TrackingState.INACTIVE,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it })
+                        ) {
+                            DefaultView(onStart = ::onStartButtonClick)
+                        }
+                        AnimatedVisibility(
+                            visible = vm.status == TrackingState.ACTIVE,
+                            enter = slideInVertically(initialOffsetY = { -it }),
+                            exit = slideOutVertically(targetOffsetY = { -it })
+                        ) {
+                            ActiveView(onStop = ::onStopButtonClick)
                         }
                     }
                 }
@@ -150,8 +180,7 @@ class MainActivity : ComponentActivity() {
                                 shouldShowFineLocationRationale = false
                                 launchFineLocationPermissionLauncher()
                             }) { Text("OK") }
-                        }
-                    )
+                        })
                 }
             }
         }
@@ -247,7 +276,11 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
 }
 
 @Composable
-fun ActiveView(vm: MonoViewModel = viewModel(), onStop: () -> Unit = {}) {
+fun ActiveView(
+    modifier: Modifier = Modifier,
+    vm: MonoViewModel = viewModel(),
+    onStop: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -260,37 +293,62 @@ fun ActiveView(vm: MonoViewModel = viewModel(), onStop: () -> Unit = {}) {
                 .fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val startTime by vm.startTime.collectAsState(0)
+                val lastLocation by vm.mostRecentLocation.collectAsState()
                 Box(
-                    Modifier
+                    modifier = modifier
                         .weight(1f)
-                        .fillMaxSize(), contentAlignment = Alignment.Center
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
                     ElapsedTimeText(startTime)
                 }
                 Box(
-                    Modifier
+                    modifier = modifier
                         .weight(2f)
-                        .fillMaxSize(), contentAlignment = Alignment.Center
-                ) { }
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Top
+                        ) {
+                            Text(
+                                text = lastLocation?.speed.let { averageSpeed ->
+                                    "%.2f".format(
+                                        averageSpeed
+                                    )
+                                },
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(text = "Speed", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "m/s (avg.)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onStop, modifier = Modifier
+        Spacer(modifier.height(16.dp))
+        HoldToActivateButton(
+            modifier = modifier
                 .weight(1f)
-                .fillMaxSize(), shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(text = "Stop")
-        }
+                .fillMaxSize(),
+            onComplete = onStop
+        ) { Text(text = "Hold to stop") }
     }
 }
 
-@Composable
-fun DetailedItemView(): Unit = TODO()
 
 @Composable
 fun ElapsedTimeText(startTime: Long, modifier: Modifier = Modifier) {
@@ -401,6 +459,65 @@ fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Mo
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HoldToActivateButton(
+    modifier: Modifier = Modifier,
+    holdDurationMillis: Int = 1000,
+    onComplete: () -> Unit = {
+        Log.d(
+            "HoldToActivateButton",
+            "Hold press activated"
+        )
+    },
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val holdProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            holdProgress.animateTo(
+                1f,
+                animationSpec = tween(holdDurationMillis, easing = LinearEasing)
+            )
+            onComplete()
+        } else {
+            holdProgress.animateTo(0f)
+        }
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.inversePrimary
+    val textStyle = MaterialTheme.typography.labelLarge
+    val contentColor = MaterialTheme.colorScheme.onPrimary
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(8.dp))
+            .background(primaryColor)
+            .drawBehind {
+                val progress = holdProgress.value
+                val fillHeight = size.height * progress
+                val yOffset = size.height - fillHeight
+                drawRect(
+                    color = secondaryColor,
+                    topLeft = Offset(x = 0f, y = yOffset),
+                    size = Size(width = size.width, height = fillHeight)
+                )
+            }
+            .clickable(interactionSource = interactionSource, indication = null, onClick = {}),
+        contentAlignment = Alignment.Center
+    ) {
+        CompositionLocalProvider(
+            LocalTextStyle provides textStyle,
+            LocalContentColor provides contentColor
+        ) {
+            content()
         }
     }
 }
