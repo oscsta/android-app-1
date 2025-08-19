@@ -119,7 +119,7 @@ interface LocationEntityDao {
     suspend fun getAllWithParentId(parentId: Long): List<LocationEntity>
 
     @Query("SELECT * FROM locations ORDER BY id DESC LIMIT 1")
-    fun getMostRecentLocation(): Flow<LocationEntity>
+    fun getMostRecentLocation(): Flow<LocationEntity?>
 }
 
 @Database(entities = [TrackedActivityEntity::class, LocationEntity::class], version = 1)
