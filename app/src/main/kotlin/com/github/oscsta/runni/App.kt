@@ -233,6 +233,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            Log.d("runni.MainActivity", "Permission rationale for fine location was requested")
         } else launchFineLocationPermissionLauncher()
     }
 
