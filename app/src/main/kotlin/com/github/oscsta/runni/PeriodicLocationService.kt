@@ -62,7 +62,7 @@ class PeriodicLocationService : LifecycleService() {
         val channel = NotificationChannel(
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID,
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Show notification while your exact location is actively being tracked"
         }
