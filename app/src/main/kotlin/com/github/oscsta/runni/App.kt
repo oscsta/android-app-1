@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -272,7 +273,7 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
                 .fillMaxSize(),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text(text = "Start")
+            Text(text = stringResource(R.string.StartButtonText))
         }
     }
 }
@@ -344,7 +345,7 @@ fun ActiveView(
                 .weight(1f)
                 .fillMaxSize(),
             onComplete = onStop
-        ) { Text(text = "Hold to stop") }
+        ) { Text(text = stringResource(R.string.StopButtonText)) }
     }
 }
 
@@ -520,6 +521,11 @@ fun HoldToActivateButton(
         }
     }
 }
+
+
+
+
+
 
 @Preview
 @Composable

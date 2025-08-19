@@ -58,13 +58,14 @@ class PeriodicLocationService : LifecycleService() {
     }
 
     private fun setupNotificationPrerequisites() {
+        val descriptionString = getString(R.string.NotificationChannelDescription)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID,
             CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Show notification while your exact location is actively being tracked"
+            description = descriptionString
         }
         notificationManager.createNotificationChannel(channel)
     }
@@ -76,8 +77,8 @@ class PeriodicLocationService : LifecycleService() {
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         currentlyRunningNotification =
             Notification.Builder(this, CURRENTLY_RUNNING_NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("Test Title")
-                .setContentText("Test Content")
+                .setContentTitle(getString(R.string.NotificationTitle))
+                .setContentText(getString(R.string.NotificationText))
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .build()

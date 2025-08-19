@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="NotificationTitle">Runni</string>
+    <string name="NotificationText">Runni is actively tracking your location</string>
+    <string name="NotificationChannelDescription">Show notification while your exact location is actively being tracked</string>
+    <string name="StopButtonText">Hold to stop</string>
+    <string name="StartButtonText">Start</string>
+</resources>
