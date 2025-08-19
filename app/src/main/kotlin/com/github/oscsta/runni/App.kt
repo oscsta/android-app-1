@@ -193,6 +193,7 @@ class MainActivity : ComponentActivity() {
                 "ACTIVE_ID", vm.activeId
             )
         }
+        Log.d("MainActivity", "Created intent $serviceIntent")
         startForegroundService(serviceIntent)
     }
 
@@ -232,7 +233,6 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            TODO()
         } else launchFineLocationPermissionLauncher()
     }
 
@@ -320,11 +320,7 @@ fun ActiveView(
                             verticalArrangement = Arrangement.Top
                         ) {
                             Text(
-                                text = lastLocation?.speed.let { averageSpeed ->
-                                    "%.2f".format(
-                                        averageSpeed
-                                    )
-                                },
+                                text = "%.2f".format(lastLocation?.speed ?: 0.00f),
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary,
                                 style = MaterialTheme.typography.bodyLarge
