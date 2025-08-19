@@ -242,6 +242,7 @@ class MainActivity : ComponentActivity() {
 }
 
 
+// Possibly not great to have an entire viewmodel as input to composable
 @Composable
 fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     Column(
@@ -275,6 +276,7 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     }
 }
 
+// Possibly not great to have an entire viewmodel as input to composable
 @Composable
 fun ActiveView(
     modifier: Modifier = Modifier,
