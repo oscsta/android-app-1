@@ -4,6 +4,8 @@
 # Log file
 *.log
 
+*.hprof
+
 # BlueJ files
 *.ctxt
 
@@ -30,6 +32,8 @@ replay_pid*
 
 # Ignore Gradle build output directory
 build
+
+app/release
 
 # Include gradle wrapper
 !gradle/wrapper/gradle-wrapper.jar
