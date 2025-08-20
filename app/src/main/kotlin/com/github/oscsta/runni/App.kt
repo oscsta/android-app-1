@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
@@ -57,6 +56,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -123,6 +123,13 @@ class MonoViewModel(application: Application) : AndroidViewModel(application) {
             postInsert(id)
         }
     }
+
+    fun deleteManyTrackedActivities(items: Set<TrackedActivityEntity>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dao = db.trackedActivityDao()
+            dao.deleteMany(items)
+        }
+    }
 }
 
 class MainActivity : ComponentActivity() {
@@ -146,7 +153,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+//        enableEdgeToEdge()
 
         setContent {
             AppTheme {
@@ -260,10 +267,19 @@ class MainActivity : ComponentActivity() {
 fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     val allTrackedActivities by vm.allTrackedActivities.collectAsState()
     var isInDeleteMode by remember { mutableStateOf(false) }
-    var deletionSet by remember { mutableStateOf(setOf<Long>()) }
+    val deletionSet = remember { mutableStateSetOf<TrackedActivityEntity>() }
+
+    // Temporary absolutely awful workaround to clear items deleted from the database from the set.
+    // TODO: Solve it in a better way later, like storing deletion set in ViewModel and clear it after database deletion has completed fully
+    LaunchedEffect(isInDeleteMode) {
+        if (isInDeleteMode && deletionSet.size != 1) {
+            deletionSet.clear()
+        }
+    }
 
     BackHandler(enabled = isInDeleteMode) {
         isInDeleteMode = false
+        deletionSet.clear()
     }
 
     Column(
@@ -279,20 +295,38 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(allTrackedActivities) { item ->
-                    TrackedActivityListItem(item,
-                        border = if (isInDeleteMode) BorderStroke(1.dp, color = MaterialTheme.colorScheme.outline) else null,
+                    TrackedActivityListItem(
+                        item,
+                        border = if (isInDeleteMode) BorderStroke(
+                            1.dp,
+                            color = MaterialTheme.colorScheme.outline
+                        ) else null,
+                        isSelectedForDeletion = deletionSet.contains(item),
                         onClick = {
-                        /* Expand card for more details,graphs,etc (if not in deletion mode) */
-                    }, onLongClick = {
-                        isInDeleteMode = true
-                    })
+                            if (isInDeleteMode) {
+                                if (deletionSet.contains(item)) {
+                                    deletionSet.remove(item)
+                                } else {
+                                    deletionSet.add(item)
+                                }
+                            }
+                            else {
+                                // Expand card and show more details, graphs, etc...
+                            }
+                        },
+                        onLongClick = {
+                            isInDeleteMode = true
+                            deletionSet.add(item)
+                        })
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
         if (isInDeleteMode) {
             Button(
-                onClick = {},
+                onClick = {
+                    vm.deleteManyTrackedActivities(deletionSet)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize(),
@@ -313,7 +347,10 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
                     .fillMaxSize(),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(text = stringResource(R.string.StartButtonText), style = MaterialTheme.typography.labelExtraLarge)
+                Text(
+                    text = stringResource(R.string.StartButtonText),
+                    style = MaterialTheme.typography.labelExtraLarge
+                )
             }
         }
     }
@@ -383,7 +420,12 @@ fun ActiveView(
             modifier = modifier
                 .weight(1f)
                 .fillMaxSize(), onComplete = onStop
-        ) { Text(text = stringResource(R.string.StopButtonText), style = MaterialTheme.typography.labelExtraLarge) }
+        ) {
+            Text(
+                text = stringResource(R.string.StopButtonText),
+                style = MaterialTheme.typography.labelExtraLarge
+            )
+        }
     }
 }
 
@@ -425,14 +467,14 @@ fun TrackedActivityListItem(
     val formatter =
         LocalDateTime.Format { date(LocalDate.Formats.ISO); chars(" | "); hour(); char(':'); minute(); }
 
-    val offsetWhenSelected by animateDpAsState(targetValue = if (isSelectedForDeletion) (-10).dp else 0.dp)
+    val offsetWhenSelected by animateDpAsState(targetValue = if (isSelectedForDeletion) (-5).dp else 0.dp)
     val deletionBorder = BorderStroke(4.dp, Color.Red)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .offset(offsetWhenSelected)
+            .offset(offsetWhenSelected, offsetWhenSelected)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         elevation = CardDefaults.cardElevation(8.dp),
         border = if (isSelectedForDeletion) deletionBorder else border

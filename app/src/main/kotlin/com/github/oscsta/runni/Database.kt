@@ -84,6 +84,9 @@ interface TrackedActivityDao {
     @Delete
     suspend fun delete(item: TrackedActivityEntity)
 
+    @Delete
+    fun deleteMany(ids: Set<TrackedActivityEntity>)
+
     @Query("UPDATE activities SET end_timestamp = :end WHERE id = :id")
     suspend fun updateEndTimestampById(id: Long, end: Long)
 
@@ -98,9 +101,6 @@ interface TrackedActivityDao {
 
     @Query("SELECT start_timestamp FROM activities ORDER BY id DESC LIMIT 1")
     fun getMostRecentStartTime(): Flow<Long>
-
-    @Query("DELETE FROM activities WHERE id IN (:ids)")
-    fun deleteManyById(ids: Set<Long>)
 }
 
 @Dao
