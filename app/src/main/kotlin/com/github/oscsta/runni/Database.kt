@@ -99,9 +99,8 @@ interface TrackedActivityDao {
     @Query("SELECT start_timestamp FROM activities ORDER BY id DESC LIMIT 1")
     fun getMostRecentStartTime(): Flow<Long>
 
-//    fun getActivityWithLocation(id: Long)
-//
-//    fun getAllActivitiesWithLocation()
+    @Query("DELETE FROM activities WHERE id IN (:ids)")
+    fun deleteManyById(ids: Set<Long>)
 }
 
 @Dao
