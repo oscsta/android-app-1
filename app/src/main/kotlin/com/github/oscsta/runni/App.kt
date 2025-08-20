@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,11 +14,14 @@ import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -28,14 +32,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +77,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.oscsta.runni.ui.AppTheme
+import com.github.oscsta.runni.ui.labelExtraLarge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -247,6 +258,14 @@ class MainActivity : ComponentActivity() {
 // Possibly not great to have an entire viewmodel as input to composable
 @Composable
 fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
+    val allTrackedActivities by vm.allTrackedActivities.collectAsState()
+    var isInDeleteMode by remember { mutableStateOf(false) }
+    var deletionSet by remember { mutableStateOf(setOf<Long>()) }
+
+    BackHandler(enabled = isInDeleteMode) {
+        isInDeleteMode = false
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -258,22 +277,44 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
                 .weight(4f)
                 .fillMaxSize()
         ) {
-            val allTrackedActivities by vm.allTrackedActivities.collectAsState()
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(allTrackedActivities) { item ->
-                    TrackedActivityListItem(item)
+                    TrackedActivityListItem(item,
+                        border = if (isInDeleteMode) BorderStroke(1.dp, color = MaterialTheme.colorScheme.outline) else null,
+                        onClick = {
+                        /* Expand card for more details,graphs,etc (if not in deletion mode) */
+                    }, onLongClick = {
+                        isInDeleteMode = true
+                    })
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = onStart,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(text = stringResource(R.string.StartButtonText))
+        if (isInDeleteMode) {
+            Button(
+                onClick = {},
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    modifier = Modifier.fillMaxSize(0.5f),
+                    contentDescription = "Delete"
+                )
+            }
+        } else {
+            Button(
+                onClick = onStart,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(text = stringResource(R.string.StartButtonText), style = MaterialTheme.typography.labelExtraLarge)
+            }
         }
     }
 }
@@ -281,9 +322,7 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
 // Possibly not great to have an entire viewmodel as input to composable
 @Composable
 fun ActiveView(
-    modifier: Modifier = Modifier,
-    vm: MonoViewModel = viewModel(),
-    onStop: () -> Unit = {}
+    modifier: Modifier = Modifier, vm: MonoViewModel = viewModel(), onStop: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -343,9 +382,8 @@ fun ActiveView(
         HoldToActivateButton(
             modifier = modifier
                 .weight(1f)
-                .fillMaxSize(),
-            onComplete = onStop
-        ) { Text(text = stringResource(R.string.StopButtonText)) }
+                .fillMaxSize(), onComplete = onStop
+        ) { Text(text = stringResource(R.string.StopButtonText), style = MaterialTheme.typography.labelExtraLarge) }
     }
 }
 
@@ -372,18 +410,32 @@ fun ElapsedTimeText(startTime: Long, modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalTime::class)
 @Composable
-fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Modifier) {
+fun TrackedActivityListItem(
+    item: TrackedActivityEntity,
+    modifier: Modifier = Modifier,
+    border: BorderStroke? = null,
+    isSelectedForDeletion: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+) {
     val totalDuration = ((item.endTimestamp
         ?: item.startTimestamp) - item.startTimestamp).milliseconds // For now just show 0 if there was no end timestamp
     val startDateTimeInSysTz = Instant.fromEpochMilliseconds(item.startTimestamp)
         .toLocalDateTime(TimeZone.currentSystemDefault())
     val formatter =
         LocalDateTime.Format { date(LocalDate.Formats.ISO); chars(" | "); hour(); char(':'); minute(); }
+
+    val offsetWhenSelected by animateDpAsState(targetValue = if (isSelectedForDeletion) (-10).dp else 0.dp)
+    val deletionBorder = BorderStroke(4.dp, Color.Red)
+
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+            .padding(8.dp)
+            .offset(offsetWhenSelected)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        elevation = CardDefaults.cardElevation(8.dp),
+        border = if (isSelectedForDeletion) deletionBorder else border
     ) {
         Column(
             modifier = modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -465,15 +517,11 @@ fun TrackedActivityListItem(item: TrackedActivityEntity, modifier: Modifier = Mo
 
 @Composable
 fun HoldToActivateButton(
-    modifier: Modifier = Modifier,
-    holdDurationMillis: Int = 1000,
-    onComplete: () -> Unit = {
+    modifier: Modifier = Modifier, holdDurationMillis: Int = 2000, onComplete: () -> Unit = {
         Log.d(
-            "HoldToActivateButton",
-            "Hold press activated"
+            "HoldToActivateButton", "Hold press activated"
         )
-    },
-    content: @Composable () -> Unit
+    }, content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -482,8 +530,7 @@ fun HoldToActivateButton(
     LaunchedEffect(isPressed) {
         if (isPressed) {
             holdProgress.animateTo(
-                1f,
-                animationSpec = tween(holdDurationMillis, easing = LinearEasing)
+                1f, animationSpec = tween(holdDurationMillis, easing = LinearEasing)
             )
             onComplete()
         } else {
@@ -514,17 +561,12 @@ fun HoldToActivateButton(
         contentAlignment = Alignment.Center
     ) {
         CompositionLocalProvider(
-            LocalTextStyle provides textStyle,
-            LocalContentColor provides contentColor
+            LocalTextStyle provides textStyle, LocalContentColor provides contentColor
         ) {
             content()
         }
     }
 }
-
-
-
-
 
 
 @Preview
