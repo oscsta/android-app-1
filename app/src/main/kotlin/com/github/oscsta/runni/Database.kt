@@ -84,8 +84,9 @@ interface TrackedActivityDao {
     @Delete
     suspend fun delete(item: TrackedActivityEntity)
 
+    // Could pass in only the IDs if a set of objects ever becomes performance issue
     @Delete
-    fun deleteMany(ids: Set<TrackedActivityEntity>)
+    fun deleteMany(items: Set<TrackedActivityEntity>)
 
     @Query("UPDATE activities SET end_timestamp = :end WHERE id = :id")
     suspend fun updateEndTimestampById(id: Long, end: Long)
