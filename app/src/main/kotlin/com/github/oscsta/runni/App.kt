@@ -270,7 +270,10 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     val deletionSet = remember { mutableStateSetOf<TrackedActivityEntity>() }
 
     // Temporary absolutely awful workaround to clear items deleted from the database from the set.
-    // TODO: Solve it in a better way later, like storing deletion set in ViewModel and clear it after database deletion has completed fully
+    /*  TODO: Solve it in a better way later.
+         Like storing deletion set where i can wait for the database deletion to finish.
+         Or honestly even simpler, just make a read-only copy of the set
+     */
     LaunchedEffect(isInDeleteMode) {
         if (isInDeleteMode && deletionSet.size != 1) {
             deletionSet.clear()
