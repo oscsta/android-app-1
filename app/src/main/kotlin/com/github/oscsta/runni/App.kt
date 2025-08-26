@@ -269,17 +269,6 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
     var isInDeleteMode by remember { mutableStateOf(false) }
     val deletionSet = remember { mutableStateSetOf<TrackedActivityEntity>() }
 
-    // Temporary absolutely awful workaround to clear items deleted from the database from the set.
-    /*  TODO: Solve it in a better way later.
-         Like storing deletion set where i can wait for the database deletion to finish.
-         Or honestly even simpler, just make a read-only copy of the set
-     */
-    LaunchedEffect(isInDeleteMode) {
-        if (isInDeleteMode && deletionSet.size != 1) {
-            deletionSet.clear()
-        }
-    }
-
     BackHandler(enabled = isInDeleteMode) {
         isInDeleteMode = false
         deletionSet.clear()
@@ -328,7 +317,8 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
         if (isInDeleteMode) {
             Button(
                 onClick = {
-                    vm.deleteManyTrackedActivities(deletionSet)
+                    vm.deleteManyTrackedActivities(deletionSet.toSet()) // Pass an immutable copy as the mutable set will be cleared before the database updates.
+                    deletionSet.clear()
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -387,6 +377,7 @@ fun ActiveView(
                         .fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+                    // TODO: This seems to be causing weird performance issues. Put time calculation in ViewModel as a background job or something
                     ElapsedTimeText(startTime)
                 }
                 Box(
