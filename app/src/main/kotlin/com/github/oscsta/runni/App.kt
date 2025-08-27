@@ -319,6 +319,7 @@ fun DefaultView(vm: MonoViewModel = viewModel(), onStart: () -> Unit) {
                 onClick = {
                     vm.deleteManyTrackedActivities(deletionSet.toSet()) // Pass an immutable copy as the mutable set will be cleared before the database updates.
                     deletionSet.clear()
+                    isInDeleteMode = false
                 },
                 modifier = Modifier
                     .weight(1f)
