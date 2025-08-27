@@ -72,7 +72,7 @@ class PeriodicLocationService : LifecycleService() {
 
     private fun buildCurrentlyRunningNotification() {
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         currentlyRunningNotification =
@@ -128,6 +128,12 @@ class PeriodicLocationService : LifecycleService() {
             locationRequest, Dispatchers.IO.asExecutor(), locationCallback
         )
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    // This should run when the main activity/app is stopped by e.g. the user swiping up the app in the recents screen
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        stopSelf()
     }
 
     override fun onDestroy() {
